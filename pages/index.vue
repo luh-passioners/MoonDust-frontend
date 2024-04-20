@@ -11,8 +11,7 @@
       <p class="lead">FMS tracks where your money comes and goes, and builds you a tailored investment strategy to further grow your finances using generative AI and machine learning.</p>  
 
       <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-4">
-        <button type="button" class="btn btn-primary btn-lg px-4 gap-3">Get started!</button>
-        <NuxtLink to="/app" type="button" class="btn btn-outline-success btn-lg px-4">Dashboard</NuxtLink>
+        <NuxtLink to="/auth/signup" type="button" class="btn btn-primary btn-lg px-4 gap-3">Get your organization started!</NuxtLink>
       </div>
     </div>
   </div>

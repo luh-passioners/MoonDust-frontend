@@ -4,8 +4,8 @@
       <NuxtLink class="navbar-brand" to="/">🐈 <b class="fw-max">FMS</b></NuxtLink>
 
       <div class="ms-auto d-flex gap-2">
-        <button class="btn btn-primary">Signup</button>
-        <button class="btn btn-outline-success">Login</button>
+        <NuxtLink to="/auth/signup" class="btn btn-primary">Signup</NuxtLink>
+        <NuxtLink to="/auth/login" class="btn btn-outline-success">Login</NuxtLink>
       </div>
     </div>
   </nav>
