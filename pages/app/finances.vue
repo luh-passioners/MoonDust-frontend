@@ -1,61 +1,100 @@
 <script setup lang="ts">
 import { Scatter, Bar } from "vue-chartjs";
-import { Chart, LinearScale, PointElement, LineElement, type ChartData, type Point, CategoryScale, BarElement, Tooltip } from "chart.js";
+import { Chart, LinearScale, PointElement, LineElement, Legend, type ChartData, type Point, CategoryScale, BarElement, Tooltip } from "chart.js";
 
 Chart.defaults.font.family = "Inter";
-Chart.register(LinearScale, PointElement, LineElement, CategoryScale, BarElement, Tooltip);
+Chart.register(LinearScale, PointElement, LineElement, CategoryScale, BarElement, Tooltip, Legend);
 
-let cumulativeSum = 0;
-const cumulativeTransactions: Point[] = [];
+const graphLists = reactive({
+  cumulativeSum: 0,
+  cumulativeTransactions: [] as Point[],
+  incomingTransactionsByOrg: [] as number[],
+  outgoingTransactionsByOrg: [] as number[]
+});
 
-getTransactions().forEach(t => {
-  cumulativeSum += t.amount;
+watchEffect(() => {
+  // Reset graphLists:
+  graphLists.cumulativeSum = 0;
+  graphLists.cumulativeTransactions.length = 0;
+  graphLists.incomingTransactionsByOrg.length = 0;
+  graphLists.outgoingTransactionsByOrg.length = 0;
 
-  cumulativeTransactions.push({
-    x: Number(new Date(t.date)),
-    y: cumulativeSum,
+  // Populate balance vs. time graph:
+  getTransactions().forEach(t => {
+    graphLists.cumulativeSum += t.amount;
+
+    graphLists.cumulativeTransactions.push({
+      x: Number(new Date(t.date)),
+      y: graphLists.cumulativeSum,
+    });
+  });
+
+  // Populate organization histogram
+  for (let i = 0; i < getOrgsLength(); i += 1) {
+    graphLists.incomingTransactionsByOrg.push(0);
+    graphLists.outgoingTransactionsByOrg.push(0);
+  }
+
+  getTransactions().forEach(t => {
+    if (t.amount > 0) {
+      graphLists.incomingTransactionsByOrg[t.orgId] += t.amount;
+    } else {
+      graphLists.outgoingTransactionsByOrg[t.orgId] += t.amount;
+    }
   });
 });
 
-const scatterData: ChartData<"scatter", (number | Point | null)[], unknown> = {
+const scatterData = computed<ChartData<"scatter", (number | Point | null)[], unknown>>(() => ({
   datasets: [{
-    data: cumulativeTransactions,
-    backgroundColor: "red",
+    label: "Balance vs. time",
+    data: graphLists.cumulativeTransactions,
+    backgroundColor: "blue",
     showLine: true,
   }],
+}));
+
+const scatterOptions = {
+  scales: {
+    x: {
+      ticks: {
+        callback(value: number) {
+          const fmt = (s: number) => (s % 1000).toLocaleString("en-US", { minimumIntegerDigits: 2 });
+
+          const d = new Date(value);
+          let month = d.getMonth();
+          month = month == 0 ? 12 : month;
+
+          return `${fmt(month)}/${fmt(d.getDate())}/${fmt(d.getFullYear())}`;
+        }
+      }
+    },
+    y: {
+      ticks: {
+        callback(value: number) {
+          return (value < 0 ? "-" : "") + "$" + Math.abs(value);
+        }
+      }
+    }
+  }
 };
 
 interface ExtendedDataPoint {
-    [key: string]: string | number | null | ExtendedDataPoint;
+  [key: string]: string | number | null | ExtendedDataPoint;
 }
 
-const incomingTransactionsByOrg: number[] = [];
-const outgoingTransactionsByOrg: number[] = [];
-
-for (let i = 0; i < getOrgsLength(); i += 1) {
-  incomingTransactionsByOrg.push(0);
-  outgoingTransactionsByOrg.push(0);
-}
-
-getTransactions().forEach(t => {
-  if (t.amount > 0) {
-    incomingTransactionsByOrg[t.orgId] += t.amount;
-  } else {
-    outgoingTransactionsByOrg[t.orgId] += t.amount;
-  }
-});
-
-const barData: ChartData<"bar", (number | [number, number] | null)[] | ExtendedDataPoint[], unknown> = {
-  labels: incomingTransactionsByOrg.map((t, i) => getOrgById(i)),
+const barData = computed<ChartData<"bar", (number | [number, number] | null)[] | ExtendedDataPoint[], unknown>>(() => ({
+  labels: graphLists.incomingTransactionsByOrg.map((t, i) => getOrgById(i)),
   datasets: [{
-    data: incomingTransactionsByOrg,
+    label: "Incoming",
+    data: graphLists.incomingTransactionsByOrg,
     backgroundColor: "green",
   },
   {
-    data: outgoingTransactionsByOrg,
+    label: "Outgoing",
+    data: graphLists.outgoingTransactionsByOrg,
     backgroundColor: "red",
   }],
-};
+}));
 </script>
 
 <template>
@@ -67,6 +106,11 @@ const barData: ChartData<"bar", (number | [number, number] | null)[] | ExtendedD
     <div class="my-4 app-grid gap-4">
       <div>
         <LuhCard title="Transactions" text="View and sort through your incoming and outgoing transactions.">
+          <div class="mb-3 d-flex gap-2">
+            <button class="btn btn-sm btn-primary">Add transaction</button>
+            <button class="btn btn-sm btn-success">Setup sync</button>
+          </div>
+
           <div class="gap-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
             <div>
               <small class="fw-bold">Type</small>
@@ -95,7 +139,7 @@ const barData: ChartData<"bar", (number | [number, number] | null)[] | ExtendedD
           <hr>
 
           <div style="max-height: 50vh; overflow-y: scroll;" class="pe-3">
-            <TransactionCard v-for="(t, i) of getTransactions()" :transaction="t" :key="i" />
+            <TransactionCard v-for="(t, i) of getTransactions().toReversed()" :transaction="t" :key="i" />
 
             <div class="text-center">
               <button class="btn btn-sm btn-dark">Load more</button>
@@ -113,12 +157,12 @@ const barData: ChartData<"bar", (number | [number, number] | null)[] | ExtendedD
               <option value="Twizz">Twizz Org</option>
             </select>
           </div>
-          <Scatter :data="scatterData"></Scatter>
+          <Scatter :data="scatterData"  :options="scatterOptions" />
         </LuhCard>
 
         <LuhCard class="mt-4" title="Transactions by organization"
           text="See incoming/outgoing balance changes by organization.">
-          <Bar :data="barData"></Bar>
+          <Bar :data="barData" />
         </LuhCard>
       </div>
     </div>
