@@ -66,3 +66,7 @@ export function getOrgById(id: number) {
 export function getOrgsLength() {
   return orgs.length;
 }
+
+export function getOrgs() {
+  return orgs;
+}

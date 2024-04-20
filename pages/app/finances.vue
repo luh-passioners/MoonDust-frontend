@@ -5,28 +5,55 @@ import { Chart, LinearScale, PointElement, LineElement, Legend, type ChartData, 
 Chart.defaults.font.family = "Inter";
 Chart.register(LinearScale, PointElement, LineElement, CategoryScale, BarElement, Tooltip, Legend);
 
-const graphLists = reactive({
-  cumulativeSum: 0,
-  cumulativeTransactions: [] as Point[],
-  incomingTransactionsByOrg: [] as number[],
-  outgoingTransactionsByOrg: [] as number[]
+const transactionFilters = reactive({
+  type: "All",
+  org: -1,
 });
+
+const filteredTransactions = computed(() => getTransactions().filter(t => {
+  // org filter fails
+  if (transactionFilters.org !== t.orgId && transactionFilters.org !== -1) {
+    return false;
+  }
+
+  // wrong type
+  if (transactionFilters.type === "Incoming" && t.amount < 0) {
+    return false;
+  }
+
+  // wrong type
+  if (transactionFilters.type === "Outgoing" && t.amount > 0) {
+    return false;
+  }
+
+  return true;
+}));
+
+const graphFilters = reactive({
+  org: -1,
+});
+
+const scatterData = shallowRef({});
+const barData = shallowRef({});
 
 watchEffect(() => {
   // Reset graphLists:
-  graphLists.cumulativeSum = 0;
-  graphLists.cumulativeTransactions.length = 0;
-  graphLists.incomingTransactionsByOrg.length = 0;
-  graphLists.outgoingTransactionsByOrg.length = 0;
+  const graphLists = {
+    cumulativeSum: 0,
+    cumulativeTransactions: [] as Point[],
+    incomingTransactionsByOrg: [] as number[],
+    outgoingTransactionsByOrg: [] as number[]
+  };
 
   // Populate balance vs. time graph:
   getTransactions().forEach(t => {
-    graphLists.cumulativeSum += t.amount;
-
-    graphLists.cumulativeTransactions.push({
-      x: Number(new Date(t.date)),
-      y: graphLists.cumulativeSum,
-    });
+    if (t.orgId === graphFilters.org || graphFilters.org === -1) {
+      graphLists.cumulativeSum += t.amount;
+      graphLists.cumulativeTransactions.push({
+        x: Number(new Date(t.date)),
+        y: graphLists.cumulativeSum,
+      });
+    }
   });
 
   // Populate organization histogram
@@ -42,18 +69,51 @@ watchEffect(() => {
       graphLists.outgoingTransactionsByOrg[t.orgId] += t.amount;
     }
   });
+
+  scatterData.value = {
+    datasets: [{
+      label: "Balance vs. time",
+      data: graphLists.cumulativeTransactions,
+      backgroundColor: "blue",
+      showLine: true,
+    }],
+  };
+
+  barData.value = {
+    labels: graphLists.incomingTransactionsByOrg.map((t, i) =>  (i)),
+    datasets: [{
+      label: "Incoming",
+      data: graphLists.incomingTransactionsByOrg,
+      backgroundColor: "green",
+    },
+    {
+      label: "Outgoing",
+      data: graphLists.outgoingTransactionsByOrg,
+      backgroundColor: "red",
+    }],
+  };
 });
 
-const scatterData = computed<ChartData<"scatter", (number | Point | null)[], unknown>>(() => ({
-  datasets: [{
-    label: "Balance vs. time",
-    data: graphLists.cumulativeTransactions,
-    backgroundColor: "blue",
-    showLine: true,
-  }],
-}));
-
 const scatterOptions = {
+  plugins: {
+    tooltip: {
+      callbacks: {
+        label(context: any) {
+          const fmt = (s: number) => (s % 1000).toLocaleString("en-US", { minimumIntegerDigits: 2 });
+
+          const d = new Date(context.parsed.x);
+          let month = d.getMonth();
+          month = month == 0 ? 12 : month;
+
+          const xParsed = `${fmt(month)}/${fmt(d.getDate())}/${fmt(d.getFullYear())}`;
+          const yParsed = (context.parsed.y < 0 ? "-" : "") + "$" + Math.abs(context.parsed.y)
+            .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+          return `${yParsed} on ${xParsed}`;
+        }
+      }
+    }
+  },
   scales: {
     x: {
       ticks: {
@@ -71,7 +131,36 @@ const scatterOptions = {
     y: {
       ticks: {
         callback(value: number) {
-          return (value < 0 ? "-" : "") + "$" + Math.abs(value);
+          return (value < 0 ? "-" : "") + "$" + Math.abs(value)
+            .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });;
+        }
+      }
+    }
+  }
+};
+
+const barOptions = {
+  plugins: {
+    tooltip: {
+      callbacks: {
+        title(context: any) {
+          return "";
+        },
+        label(context: any) {      
+          const yParsed = (context.parsed.y < 0 ? "-" : "") + "$" + Math.abs(context.parsed.y)
+            .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+          return `${getOrgById(context.parsed.x)}: ${yParsed}`;
+        }
+      }
+    }
+  },
+  scales: {
+    y: {
+      ticks: {
+        callback(value: number) {
+          return (value < 0 ? "-" : "") + "$" + Math.abs(value)
+            .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });;
         }
       }
     }
@@ -81,20 +170,6 @@ const scatterOptions = {
 interface ExtendedDataPoint {
   [key: string]: string | number | null | ExtendedDataPoint;
 }
-
-const barData = computed<ChartData<"bar", (number | [number, number] | null)[] | ExtendedDataPoint[], unknown>>(() => ({
-  labels: graphLists.incomingTransactionsByOrg.map((t, i) => getOrgById(i)),
-  datasets: [{
-    label: "Incoming",
-    data: graphLists.incomingTransactionsByOrg,
-    backgroundColor: "green",
-  },
-  {
-    label: "Outgoing",
-    data: graphLists.outgoingTransactionsByOrg,
-    backgroundColor: "red",
-  }],
-}));
 </script>
 
 <template>
@@ -111,10 +186,10 @@ const barData = computed<ChartData<"bar", (number | [number, number] | null)[] |
             <button class="btn btn-sm btn-success">Setup sync</button>
           </div>
 
-          <div class="gap-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
+          <div class="gap-3" style="display: grid; grid-template-columns: 1fr 1fr;">
             <div>
               <small class="fw-bold">Type</small>
-              <select class="form-select">
+              <select class="form-select" v-model="transactionFilters.type">
                 <option value="All">All</option>
                 <option value="Incoming">Incoming</option>
                 <option value="Outgoing">Outgoing</option>
@@ -122,24 +197,16 @@ const barData = computed<ChartData<"bar", (number | [number, number] | null)[] |
             </div>
             <div>
               <small class="fw-bold">Organization</small>
-              <select class="form-select">
-                <option value="All">All</option>
-                <option value="Twizz">Twizz Org</option>
-              </select>
-            </div>
-            <div>
-              <small class="fw-bold">Product</small>
-              <select class="form-select">
-                <option value="All">All</option>
-                <option value="Spotify">Spotify</option>
-                <option value="AWS">AWS</option>
+              <select class="form-select" v-model="transactionFilters.org">
+                <option :value="-1">All</option>
+                <option v-for="(org, i) of getOrgs()" :key="i" :value="i">{{ org }}</option>
               </select>
             </div>
           </div>
           <hr>
 
           <div style="max-height: 50vh; overflow-y: scroll;" class="pe-3">
-            <TransactionCard v-for="(t, i) of getTransactions().toReversed()" :transaction="t" :key="i" />
+            <TransactionCard v-for="(t, i) of filteredTransactions.toReversed()" :transaction="t" :key="i" />
 
             <div class="text-center">
               <button class="btn btn-sm btn-dark">Load more</button>
@@ -152,17 +219,17 @@ const barData = computed<ChartData<"bar", (number | [number, number] | null)[] |
         <LuhCard title="Balance vs. time" text="Visualize how your balances has changed over time.">
           <div class="mb-4">
             <small class="fw-bold">Organization</small>
-            <select class="form-select">
-              <option value="All">All</option>
-              <option value="Twizz">Twizz Org</option>
+            <select class="form-select" v-model="graphFilters.org">
+              <option :value="-1">All</option>
+              <option v-for="(org, i) of getOrgs()" :key="i" :value="i">{{ org }}</option>
             </select>
           </div>
-          <Scatter :data="scatterData"  :options="scatterOptions" />
+          <Scatter :data="scatterData" :options="scatterOptions" />
         </LuhCard>
 
         <LuhCard class="mt-4" title="Transactions by organization"
           text="See incoming/outgoing balance changes by organization.">
-          <Bar :data="barData" />
+          <Bar :data="barData" :options="barOptions" />
         </LuhCard>
       </div>
     </div>
