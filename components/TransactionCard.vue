@@ -13,7 +13,7 @@ const isGain = computed(() => props.transaction.amount >= 0);
         <p class="h6 my-0">{{ props.transaction.name }}</p>
         <small class="fst-italic">{{ props.transaction.date }}</small>
       </div>
-      <b class="h4 my-0">{{ isGain ? "+" : "-" }}${{ Math.abs(transaction.amount) }}</b>
+      <b class="h4 my-0">{{ isGain ? "+" : "-" }}${{ Math.abs(transaction.amount).toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 }) }}</b>
     </summary>
 
     <hr class="my-2">
