@@ -5,7 +5,7 @@
   font-family: "Inter", sans-serif !important;
 }
 
-.font-weight-max {
+.fw-max {
   font-weight: 900;
 }
 
@@ -19,4 +19,15 @@
   left: 0px;
   right: 0px;
   z-index: -123;
+}
+
+.page-enter-active,
+.page-leave-active {
+  transition: all 0.2s;
+}
+
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+  filter: blur(0.125rem);
 }

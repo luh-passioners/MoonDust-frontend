@@ -1,7 +1,7 @@
 <template>
   <nav class="navbar navbar-expand-lg bg-body-tertiary p-3">
     <div class="container-fluid">
-      <NuxtLink class="navbar-brand" to="/">🐈 <b class="font-weight-max">FMS</b></NuxtLink>
+      <NuxtLink class="navbar-brand" to="/">🐈 <b class="fw-max">FMS</b></NuxtLink>
 
       <div class="ms-auto d-flex gap-2">
         <button class="btn btn-primary">Signup</button>
