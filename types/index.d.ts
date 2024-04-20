@@ -3,5 +3,4 @@ declare interface ITransaction {
   orgId: number;
   date: string;
   amount: number;
-  productId?: number;
 }
