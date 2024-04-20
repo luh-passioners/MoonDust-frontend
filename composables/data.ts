@@ -1,4 +1,4 @@
-const transactions: ITransaction[] = [
+const transactions = ref<ITransaction[]>([
   {
     name: "User Subscription",
     date: "2024-03-12",
@@ -47,7 +47,7 @@ const transactions: ITransaction[] = [
     amount: 600.00,
     orgId: 2
   }
-].toSorted((a, b) => a.date.localeCompare(b.date));
+])
 
 const orgs = [
   "R&D",

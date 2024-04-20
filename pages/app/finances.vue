@@ -10,7 +10,9 @@ const transactionFilters = reactive({
   org: -1,
 });
 
-const filteredTransactions = computed(() => getTransactions().filter(t => {
+const sortedTransactions = computed(() => getTransactions().value.toSorted((a, b) => a.date.localeCompare(b.date)));
+
+const filteredTransactions = computed(() => sortedTransactions.value.filter(t => {
   // org filter fails
   if (transactionFilters.org !== t.orgId && transactionFilters.org !== -1) {
     return false;
@@ -46,7 +48,7 @@ watchEffect(() => {
   };
 
   // Populate balance vs. time graph:
-  getTransactions().forEach(t => {
+  sortedTransactions.value.forEach(t => {
     if (t.orgId === graphFilters.org || graphFilters.org === -1) {
       graphLists.cumulativeSum += t.amount;
       graphLists.cumulativeTransactions.push({
@@ -62,7 +64,7 @@ watchEffect(() => {
     graphLists.outgoingTransactionsByOrg.push(0);
   }
 
-  getTransactions().forEach(t => {
+  getTransactions().value.forEach(t => {
     if (t.amount > 0) {
       graphLists.incomingTransactionsByOrg[t.orgId] += t.amount;
     } else {
@@ -80,7 +82,7 @@ watchEffect(() => {
   };
 
   barData.value = {
-    labels: graphLists.incomingTransactionsByOrg.map((t, i) =>  (i)),
+    labels: graphLists.incomingTransactionsByOrg.map((t, i) => (i)),
     datasets: [{
       label: "Incoming",
       data: graphLists.incomingTransactionsByOrg,
@@ -115,19 +117,19 @@ const scatterOptions = {
     }
   },
   scales: {
-    x: {
-      ticks: {
-        callback(value: number) {
-          const fmt = (s: number) => (s % 1000).toLocaleString("en-US", { minimumIntegerDigits: 2 });
+    // x: {
+    //   ticks: {
+    //     callback(value: number) {
+    //       const fmt = (s: number) => (s % 1000).toLocaleString("en-US", { minimumIntegerDigits: 2 });
 
-          const d = new Date(value);
-          let month = d.getMonth();
-          month = month == 0 ? 12 : month;
+    //       const d = new Date(value);
+    //       let month = d.getMonth();
+    //       month = month == 0 ? 12 : month;
 
-          return `${fmt(month)}/${fmt(d.getDate())}/${fmt(d.getFullYear())}`;
-        }
-      }
-    },
+    //       return `${fmt(month)}/${fmt(d.getDate())}/${fmt(d.getFullYear())}`;
+    //     }
+    //   }
+    // },
     y: {
       ticks: {
         callback(value: number) {
@@ -146,7 +148,7 @@ const barOptions = {
         title(context: any) {
           return "";
         },
-        label(context: any) {      
+        label(context: any) {
           const yParsed = (context.parsed.y < 0 ? "-" : "") + "$" + Math.abs(context.parsed.y)
             .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -167,9 +169,20 @@ const barOptions = {
   }
 };
 
-interface ExtendedDataPoint {
-  [key: string]: string | number | null | ExtendedDataPoint;
+const addTransactionParams = reactive({
+  orgId: -1,
+  amount: 0,
+  name: "",
+  date: "",
+});
+
+function addTransaction() {
+  getTransactions().value.push({ ...addTransactionParams });
 }
+
+const syncTransactions = reactive({
+  url: "",
+});
 </script>
 
 <template>
@@ -180,12 +193,60 @@ interface ExtendedDataPoint {
 
     <div class="my-4 app-grid gap-4">
       <div>
-        <LuhCard title="Transactions" text="View and sort through your incoming and outgoing transactions.">
-          <div class="mb-3 d-flex gap-2">
-            <button class="btn btn-sm btn-primary">Add transaction</button>
-            <button class="btn btn-sm btn-success">Setup sync</button>
-          </div>
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title d-flex align-items-start">
+              Add Transactions
+            </h5>
 
+            <details class="border px-3 py-2 rounded my-2">
+              <summary>
+                <p class="d-inline card-text">Log a transaction manually.</p>
+              </summary>
+
+              <form @submit.prevent="addTransaction">
+                <div class="my-2">
+                  <small class="fw-bold">Caption</small>
+                  <input class="form-control" type="text" v-model="addTransactionParams.name" required>
+                </div>
+
+                <div class="my-2">
+                  <small class="fw-bold">Organization</small>
+                  <select class="form-select" v-model="addTransactionParams.orgId" required>
+                    <option v-for="(org, i) of getOrgs()" :key="i" :value="i">{{ org }}</option>
+                  </select>
+                </div>
+                <div class="my-2">
+                  <small class="fw-bold">Amount</small>
+                  <input class="form-control" type="number" v-model="addTransactionParams.amount" step="0.01" required>
+                </div>
+
+                <div class="my-2">
+                  <small class="fw-bold">Date</small>
+                  <input type="date" v-model="addTransactionParams.date" class="form-control" required>
+                </div>
+
+                <button class="btn btn-success my-2" type="submit">Add transaction</button>
+              </form>
+            </details>
+
+            <details class="border px-3 py-2 rounded my-2">
+                <summary>
+                  <p class="card-text d-inline">Sync your account balance with FMS.</p>
+                </summary>
+
+                <form @submit.prevent>
+                    <div class="my-2">
+                      <small class="fw-bold">Polling URL</small>
+                      <input class="form-control" type="text" v-model="syncTransactions.url">
+                    </div>
+                  <button class="btn btn-success my-2">Setup balance sync</button>
+                </form>
+            </details>
+          </div>
+        </div>
+
+        <LuhCard title="Preview Transactions" text="View and sort through your incoming and outgoing transactions.">
           <div class="gap-3" style="display: grid; grid-template-columns: 1fr 1fr;">
             <div>
               <small class="fw-bold">Type</small>
