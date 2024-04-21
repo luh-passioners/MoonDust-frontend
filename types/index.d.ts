@@ -34,4 +34,10 @@ declare interface IPosition {
   netChange?: number;
 }
 
+declare interface IRecommendation {
+  ticker: string;
+  score: number;
+  company: string;
+}
+
 declare type TStockRange = ({ date: string, price: number })[];

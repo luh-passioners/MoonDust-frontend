@@ -24,6 +24,20 @@ const state = useAsyncData<{
   }
 });
 
+const recommendations = useAsyncData("recommendations", async () => {
+  const res = await api<{
+    success: boolean;
+    tickers: IRecommendation[];
+  }>("GET")("/recommendations");
+
+  if (res.success) {
+    console.log(res);
+    return res.tickers;
+  } else {
+    return [];
+  }
+});
+
 const positions = computed(() => state.data.value?.positions || []);
 const ranges = computed(() => state.data.value?.ranges || {});
 
@@ -101,6 +115,9 @@ watchEffect(() => {
         </LuhCard>
         <LuhCard class="mb-4" title="View portfolio" text="View your current positions.">
           <hr>
+          <p class="lead text-center" v-if="positions.length === 0">
+            No positions, add one above!
+          </p>
           <PositionCard 
             v-for="pos of positions" 
             :key="pos._id"
@@ -117,7 +134,9 @@ watchEffect(() => {
         </LuhCard>
 
         <LuhCard class="mb-4" title="Position recommendations" text="Our ML-powered recommendation algorithm scours the market for today's top investments.">
-
+          <hr>
+          {{ recommendations.data.value?.toSorted((a, b) => a.score - b.score).map(x => `${x.ticker}`).join(", ") }}
+          <p v-if="recommendations === null" class="lead text-center">Loading recommendations...</p>
         </LuhCard>
       </div>
     </div>
