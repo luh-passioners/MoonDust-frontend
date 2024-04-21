@@ -15,3 +15,41 @@ export const api = <T>(method: "GET" | "POST" | "DELETE") =>
       body: typeof payload === "object" ? JSON.stringify(payload) : undefined
     })
     .then(response => response.json() as T);
+
+export const fetchTransactions = async () => {
+  const res = await api<{
+    success: boolean;
+    transactions: ITransaction[];
+  }>("GET")("/transactions");
+
+  if (res.success) {
+    return res.transactions;
+  } else {
+    return [];
+  }
+};
+
+export const fetchOrgs = async () => {
+  const res = await api<{
+    success: boolean;
+    orgs: IOrg[];
+  }>("GET")("/orgs");
+
+  if (res.success) {
+    return res.orgs;
+  } else {
+    return [];
+  }
+};
+
+const state = ref({
+  orgs: [] as IOrg[],
+  transactions: [] as ITransaction[]
+});
+
+const refresh = async () => {
+  state.value = {
+    orgs: await fetchOrgs(),
+    transactions: await fetchTransactions(),
+  };
+};
