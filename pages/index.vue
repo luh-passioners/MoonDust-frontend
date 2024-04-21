@@ -7,7 +7,7 @@ const isLoggedIn = computed(() => token.value !== null);
 <template>
   <div class="px-4 py-5 my-5 text-center">
     <p class="fw-max d-inline-flex align-items-center justify-content-center bg-dark text-white rounded shadow px-4 my-4">
-      <span style="font-size: 5rem; margin-left: -0.5rem;">🐈</span>
+      <span style="font-size: 5rem; margin-left: -0.5rem;">💫</span>
       <span style="font-size: 3.5rem;" class="ms-2">MoonDust</span>
     </p>
     <h1 class="h1 fw-max my-2">Invest, track, and protect your organization's finances.</h1>

@@ -13,7 +13,7 @@ const logout = () => {
 <template>
   <nav class="navbar navbar-expand-lg bg-body-tertiary p-3">
     <div class="container-fluid">
-      <NuxtLink class="navbar-brand" to="/">🐈 <b class="fw-max">MoonDust</b></NuxtLink>
+      <NuxtLink class="navbar-brand" to="/">💫 <b class="fw-max">MoonDust</b></NuxtLink>
 
       <div class="ms-auto d-flex align-items-center gap-2" v-if="isLoggedIn">
         <span class="me-2">

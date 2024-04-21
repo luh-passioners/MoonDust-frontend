@@ -135,7 +135,9 @@ watchEffect(() => {
 
         <LuhCard class="mb-4" title="Position recommendations" text="Our ML-powered recommendation algorithm scours the market for today's top investments.">
           <hr>
-          {{ recommendations.data.value?.toSorted((a, b) => a.score - b.score).map(x => `${x.ticker}`).join(", ") }}
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr;">
+            <a href="#" @click="addPositionParams.ticker = rec.ticker;" class="btn btn-link p-0 p-1" v-for="(rec, i) of recommendations.data.value?.toSorted((a, b) => a.score - b.score)">{{ rec.ticker }}</a>
+          </div>
           <p v-if="recommendations === null" class="lead text-center">Loading recommendations...</p>
         </LuhCard>
       </div>
