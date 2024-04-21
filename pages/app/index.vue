@@ -24,8 +24,8 @@
 
       <div class="card bg-body-tertiary">
         <div class="card-body">
-          <h5 class="card-title">User Management</h5>
-          <p class="card-text">Add and manage user access to FMS products.</p>
+          <h5 class="card-title">Admin Management</h5>
+          <p class="card-text">Manage organizations and user access to FMS products.</p>
           <div class="text-end">
             <NuxtLink class="btn btn-primary" to="/app/users">Manage Users →</NuxtLink>
           </div>

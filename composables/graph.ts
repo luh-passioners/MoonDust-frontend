@@ -1,6 +1,9 @@
-import type { Point } from "chart.js";
+import { Chart, LinearScale, PointElement, LineElement, Legend, type Point, CategoryScale, BarElement, Tooltip } from "chart.js";
 
-export const financesBalanceVsTimeOptions = {
+Chart.defaults.font.family = "Inter";
+Chart.register(LinearScale, PointElement, LineElement, CategoryScale, BarElement, Tooltip, Legend);
+
+export const financesBalanceVsTimeOptions: any = {
   plugins: {
     tooltip: {
       callbacks: {
@@ -67,7 +70,7 @@ export const useFinancesByOrganizationData = (incoming: number[], outgoing: numb
   }],
 });
 
-export const financesByOrganizationOptions = {
+export const financesByOrganizationOptions: any = {
   plugins: {
     tooltip: {
       callbacks: {

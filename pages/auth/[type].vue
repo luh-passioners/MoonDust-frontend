@@ -1,6 +1,5 @@
 <script setup lang="ts">
 const route = useRoute();
-const router = useRouter();
 
 const isSignup = route.params.type === "signup";
 
@@ -45,7 +44,7 @@ async function submit() {
   token.value = response.token;
   user.value = response.user;
   
-  router.push("/app");
+  navigateTo("/app");
 }
 </script>
 

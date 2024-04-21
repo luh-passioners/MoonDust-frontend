@@ -1,16 +1,58 @@
 <script setup lang="ts">
+import type { Point } from "chart.js";
 import { Scatter, Bar } from "vue-chartjs";
-import { Chart, LinearScale, PointElement, LineElement, Legend, type ChartData, type Point, CategoryScale, BarElement, Tooltip } from "chart.js";
 
-Chart.defaults.font.family = "Inter";
-Chart.register(LinearScale, PointElement, LineElement, CategoryScale, BarElement, Tooltip, Legend);
+definePageMeta({
+  middleware: "auth",
+});
+
+const user = useUser();
+
+const fetchTransactions = async () => {
+  const res = await api<{
+    success: boolean;
+    transactions: ITransaction[];
+  }>("GET")("/transactions");
+
+  if (res.success) {
+    return res.transactions;
+  } else {
+    return [];
+  }
+};
+
+const fetchOrgs = async () => {
+  const res = await api<{
+    success: boolean;
+    orgs: IOrg[];
+  }>("GET")("/orgs");
+
+  if (res.success) {
+    return res.orgs;
+  } else {
+    return [];
+  }
+};
+
+const state = await useAsyncData<{
+  transactions: ITransaction[];
+  orgs: IOrg[];
+
+}>("transactions", async () => {
+  return {
+    transactions: await fetchTransactions(),
+    orgs: await fetchOrgs(),
+  };
+});
+
+const orgs = computed(() => state.data.value?.orgs || []);
 
 const transactionFilters = reactive({
   type: "All",
   org: -1,
 });
 
-const sortedTransactions = computed(() => getTransactions().value.toSorted((a, b) => a.date.localeCompare(b.date)));
+const sortedTransactions = computed(() => (state.data.value?.transactions || []).toSorted((a, b) => a.date.localeCompare(b.date)));
 
 const filteredTransactions = computed(() => sortedTransactions.value.filter(t => {
   // org filter fails
@@ -35,8 +77,8 @@ const graphFilters = reactive({
   org: -1,
 });
 
-const scatterData = shallowRef({});
-const barData = shallowRef({});
+const scatterData = shallowRef<any>({});
+const barData = shallowRef<any>({});
 
 watchEffect(() => {
   let cumulativeSum = 0;
@@ -61,7 +103,7 @@ watchEffect(() => {
     outgoingTransactionsByOrg.push(0);
   }
 
-  getTransactions().value.forEach(t => {
+  sortedTransactions.value.forEach(t => {
     if (t.amount > 0) {
       incomingTransactionsByOrg[t.orgId] += t.amount;
     } else {
@@ -81,8 +123,16 @@ const addTransactionParams = reactive({
   date: "",
 });
 
-function addTransaction() {
-  getTransactions().value.push({ _id: "45", company: "twizz", ...addTransactionParams });
+async function addTransaction() {
+  const res = await api<{
+    success: boolean;
+  }>("POST")("/transactions", { ...addTransactionParams });
+
+  if (!res.success) {
+    alert("Error adding the transaction. Retry a bit later?");
+  }
+
+  state.refresh();
 }
 
 const syncTransactions = reactive({
@@ -98,12 +148,9 @@ const syncTransactions = reactive({
 
     <div class="my-4 app-grid gap-4">
       <div>
-        <div class="card mb-4">
-          <div class="card-body">
-            <h5 class="card-title d-flex align-items-start">
-              Add Transactions
-            </h5>
-
+        <LuhCard class="mb-4" title="Add a transaction" text="There are multiple ways to add transaction information to FMS.">
+          <p class="lead" v-if="orgs.length === 0">No organizations. <NuxtLink to="/app/admin">Add one!</NuxtLink></p>
+          <template v-else>
             <details class="border px-3 py-2 rounded my-2">
               <summary>
                 <p class="d-inline card-text">Log a transaction manually.</p>
@@ -118,7 +165,7 @@ const syncTransactions = reactive({
                 <div class="my-2">
                   <small class="fw-bold">Organization</small>
                   <select class="form-select" v-model="addTransactionParams.orgId" required>
-                    <option v-for="(org, i) of getOrgs()" :key="i" :value="i">{{ org }}</option>
+                    <option v-for="org of orgs" :key="org._id" :value="org.name">{{ org.name }}</option>
                   </select>
                 </div>
                 <div class="my-2">
@@ -148,8 +195,8 @@ const syncTransactions = reactive({
                   <button class="btn btn-success my-2">Setup balance sync</button>
                 </form>
             </details>
-          </div>
-        </div>
+          </template>
+        </LuhCard>
 
         <LuhCard title="Preview Transactions" text="View and sort through your incoming and outgoing transactions.">
           <div class="gap-3" style="display: grid; grid-template-columns: 1fr 1fr;">
@@ -164,8 +211,8 @@ const syncTransactions = reactive({
             <div>
               <small class="fw-bold">Organization</small>
               <select class="form-select" v-model="transactionFilters.org">
-                <option :value="-1">All</option>
-                <option v-for="(org, i) of getOrgs()" :key="i" :value="i">{{ org }}</option>
+                <option :value="-1" v-if="user?.type === 'full'">All</option>
+                <option v-for="org of orgs" :key="org._id" :value="org.name">{{ org.name }}</option>
               </select>
             </div>
           </div>
@@ -173,10 +220,7 @@ const syncTransactions = reactive({
 
           <div style="max-height: 50vh; overflow-y: scroll;" class="pe-3">
             <TransactionCard v-for="(t, i) of filteredTransactions.toReversed()" :transaction="t" :key="i" />
-
-            <div class="text-center">
-              <button class="btn btn-sm btn-dark">Load more</button>
-            </div>
+            <p v-if="filteredTransactions.length === 0" class="lead">No transactions yet; log one above.</p>
           </div>
         </LuhCard>
       </div>
@@ -187,15 +231,17 @@ const syncTransactions = reactive({
             <small class="fw-bold">Organization</small>
             <select class="form-select" v-model="graphFilters.org">
               <option :value="-1">All</option>
-              <option v-for="(org, i) of getOrgs()" :key="i" :value="i">{{ org }}</option>
+              <option v-for="org of orgs" :key="org._id" :value="org.name">{{ org.name }}</option>
             </select>
           </div>
-          <Scatter :data="scatterData" :options="financesBalanceVsTimeOptions" />
+          <p v-if="filteredTransactions.length === 0" class="lead">Log a transaction to enable data visualization.</p>
+          <Scatter v-else :data="scatterData" :options="financesBalanceVsTimeOptions" />
         </LuhCard>
 
         <LuhCard class="mt-4" title="Transactions by organization"
           text="See incoming/outgoing balance changes by organization.">
-          <Bar :data="barData" :options="financesByOrganizationOptions" />
+          <p v-if="filteredTransactions.length === 0" class="lead">Log a transaction to enable data visualization.</p>
+          <Bar v-else :data="barData" :options="financesByOrganizationOptions" />
         </LuhCard>
       </div>
     </div>

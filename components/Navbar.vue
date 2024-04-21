@@ -13,7 +13,7 @@ const user = useUser();
         <span>
           <b>{{ user?.name }}</b> @ {{ user?.company }}
         </span>
-        <NuxtLink to="/auth/signup" class="btn btn-dark">Dashboard</NuxtLink>
+        <NuxtLink to="/app" class="btn btn-dark">Dashboard</NuxtLink>
         <button class="btn btn-danger">Logout</button>
       </div>
       <div class="ms-auto d-flex gap-2" v-else>
