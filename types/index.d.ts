@@ -2,7 +2,7 @@ declare interface ITransaction {
   _id: string;
   name: string;
   company: string;
-  orgId: number;
+  org_id: string;
   date: string;
   amount: number;
 }

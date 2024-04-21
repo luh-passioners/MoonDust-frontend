@@ -1,3 +1,9 @@
+<script setup lang="ts">
+definePageMeta({
+  middleware: "auth",
+});
+</script>
+
 <template>
   <div class="container py-4">
     <h1 class="h1 fw-max text-center">Dashboard</h1>

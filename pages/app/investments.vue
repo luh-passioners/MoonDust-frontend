@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Scatter } from "vue-chartjs";
+import { Line, Scatter } from "vue-chartjs";
 
 definePageMeta({
   middleware: "auth",
@@ -55,7 +55,7 @@ watchEffect(() => {
     for (let point of ranges.value[pos.ticker]) {
       const { date, price } = point;
 
-      const added = date === pos.startDate ? pos.initialPrice : price;
+      const added = pos.shares * (date === pos.startDate ? pos.initialPrice : price);
 
       portfolioByDate[Date.parse(date)] = (portfolioByDate[Date.parse(date)] || 0) + added; 
     }
@@ -114,6 +114,10 @@ watchEffect(() => {
         <LuhCard class="mb-4" title="Portfolio value vs. time" text="Visualize the change in your portfolio value over time.">
           <p v-if="positions.length === 0" class="lead text-center">Add to your portfolio for data visualization.</p>
           <Scatter v-else :data="scatterData" :options="financesBalanceVsTimeOptions" />
+        </LuhCard>
+
+        <LuhCard class="mb-4" title="Position recommendations" text="Our ML-powered recommendation algorithm scours the market for today's top investments.">
+
         </LuhCard>
       </div>
     </div>

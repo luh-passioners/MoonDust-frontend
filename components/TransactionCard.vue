@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   transaction: ITransaction;
-  org: IOrg;
+  orgName: string;
 }>();
 
 const isGain = computed(() => props.transaction.amount >= 0);
@@ -21,7 +21,7 @@ const isGain = computed(() => props.transaction.amount >= 0);
 
     <div class="data-row">
       <p>Organization</p>
-      <b>{{ props.org.name }}</b>
+      <b>{{ props.orgName }}</b>
     </div>
   </details>
 </template>

@@ -34,29 +34,32 @@ const fetchOrgs = async () => {
   }
 };
 
-const state = await useAsyncData<{
-  transactions: ITransaction[];
-  orgs: IOrg[];
-
-}>("finances", async () => {
-  return {
-    transactions: await fetchTransactions(),
-    orgs: await fetchOrgs(),
-  };
+const state = ref({
+  orgs: [] as IOrg[],
+  transactions: [] as ITransaction[]
 });
 
-const orgs = computed(() => state.data.value?.orgs || []);
+const refresh = async () => {
+  state.value = {
+    orgs: await fetchOrgs(),
+    transactions: await fetchTransactions(),
+  };
+};
+
+onMounted(() => refresh());
+
+const orgs = computed(() => state.value?.orgs || []);
 
 const transactionFilters = reactive({
   type: "All",
-  org: -1,
+  org: "-1",
 });
 
-const sortedTransactions = computed(() => (state.data.value?.transactions || []).toSorted((a, b) => a.date.localeCompare(b.date)));
+const sortedTransactions = computed(() => (state.value?.transactions || []).toSorted((a, b) => a.date.localeCompare(b.date)));
 
 const filteredTransactions = computed(() => sortedTransactions.value.filter(t => {
   // org filter fails
-  if (transactionFilters.org !== t.orgId && transactionFilters.org !== -1) {
+  if (transactionFilters.org !== t.org_id && transactionFilters.org !== "-1") {
     return false;
   }
 
@@ -74,50 +77,78 @@ const filteredTransactions = computed(() => sortedTransactions.value.filter(t =>
 }));
 
 const graphFilters = reactive({
-  org: -1,
+  org: "-1",
 });
+
+const getOrgById = (id: string) => {
+  return orgs.value.find(x => x._id === id) as IOrg;
+};
 
 const scatterData = shallowRef<any>({});
 const barData = shallowRef<any>({});
+const barOptions = shallowRef<any>({});
+
+//@ts-ignore
+window._barData = barData; window._orgs = orgs; window._state = state;
 
 watchEffect(() => {
   let cumulativeSum = 0;
   const cumulativeTransactions: Point[] = [];
-  const incomingTransactionsByOrg: number[] = [];
-  const outgoingTransactionsByOrg: number[] = [];
+  const incomingTransactionsByOrg: Record<string, number> = {};
+  const outgoingTransactionsByOrg: Record<string, number> = {};
 
   // Populate balance vs. time graph:
   sortedTransactions.value.forEach(t => {
-    if (t.orgId === graphFilters.org || graphFilters.org === -1) {
+    console.log(t.org_id, graphFilters.org);
+    if (t.org_id === graphFilters.org || graphFilters.org === "-1") {
       cumulativeSum += t.amount;
+      const x = Number(new Date(t.date));
+      const dupe = cumulativeTransactions.length > 0 && 
+        cumulativeTransactions[cumulativeTransactions.length - 1].x === x;
+
+      if (dupe) {
+        cumulativeTransactions.pop();
+      }
+
       cumulativeTransactions.push({
-        x: Number(new Date(t.date)),
+        x,
         y: cumulativeSum,
       });
     }
   });
 
   // Populate organization histogram
-  for (let i = 0; i < orgs.value.length; i += 1) {
-    incomingTransactionsByOrg.push(0);
-    outgoingTransactionsByOrg.push(0);
-  }
-
   sortedTransactions.value.forEach(t => {
     if (t.amount > 0) {
-      incomingTransactionsByOrg[t.orgId] += t.amount;
+      incomingTransactionsByOrg[t.org_id] = (incomingTransactionsByOrg[t.org_id] || 0) + t.amount;
     } else {
-      outgoingTransactionsByOrg[t.orgId] += t.amount;
+      outgoingTransactionsByOrg[t.org_id] = (outgoingTransactionsByOrg[t.org_id] || 0) + t.amount;
     }
   });
 
+
   scatterData.value = useFinancesBalanceVsTimeData(cumulativeTransactions);
 
-  barData.value = useFinancesByOrganizationData(incomingTransactionsByOrg, outgoingTransactionsByOrg);
+  const indexOrgNameMap: Record<number, string> = {};
+  const incomingOrgTransList: number[] = [];
+  const outgoingOrgTransList: number[] = [];
+
+  console.log({ indexOrgNameMap, incomingOrgTransList, outgoingOrgTransList });
+
+  let i = 0;
+  for (let orgId of Object.keys(incomingTransactionsByOrg)) {
+    indexOrgNameMap[i] = orgs.value.find(x => x._id === orgId)?.name || "N/A";
+    incomingOrgTransList.push(incomingTransactionsByOrg[orgId]);
+    outgoingOrgTransList.push(outgoingTransactionsByOrg[orgId]);
+    i += 1;
+  }
+
+  barData.value = useFinancesByOrganizationData(incomingOrgTransList, outgoingOrgTransList);
+  barOptions.value = useFinancesByOrganizationOptions(indexOrgNameMap);
 });
 
 const addTransactionParams = reactive({
-  orgId: -1,
+  org_id: -1,
   amount: 0,
   name: "",
   date: "",
@@ -132,7 +163,7 @@ async function addTransaction() {
     alert("Error adding the transaction. Retry a bit later?");
   }
 
-  state.refresh();
+  refresh();
 }
 
 const syncTransactions = reactive({
@@ -164,8 +195,8 @@ const syncTransactions = reactive({
 
                 <div class="my-2">
                   <small class="fw-bold">Organization</small>
-                  <select class="form-select" v-model="addTransactionParams.orgId" required>
-                    <option v-for="org of orgs" :key="org._id" :value="org.name">{{ org.name }}</option>
+                  <select class="form-select" v-model="addTransactionParams.org_id" required>
+                    <option v-for="org of orgs" :key="org._id" :value="org._id">{{ org.name }}</option>
                   </select>
                 </div>
                 <div class="my-2">
@@ -212,14 +243,14 @@ const syncTransactions = reactive({
               <small class="fw-bold">Organization</small>
               <select class="form-select" v-model="transactionFilters.org">
                 <option :value="-1" v-if="user?.type === 'full'">All</option>
-                <option v-for="org of orgs" :key="org._id" :value="org.name">{{ org.name }}</option>
+                <option v-for="org of orgs" :key="org._id" :value="org._id">{{ org.name }}</option>
               </select>
             </div>
           </div>
           <hr>
 
           <div style="max-height: 50vh; overflow-y: scroll;" class="pe-3">
-            <TransactionCard v-for="(t, i) of filteredTransactions.toReversed()" :transaction="t" :key="i" />
+            <TransactionCard v-for="(t, i) of filteredTransactions.toReversed()" :orgName="getOrgById(t.org_id)?.name" :transaction="t" :key="i" />
             <p v-if="filteredTransactions.length === 0" class="lead text-center">No transactions yet; log one above.</p>
           </div>
         </LuhCard>
@@ -231,17 +262,17 @@ const syncTransactions = reactive({
             <small class="fw-bold">Organization</small>
             <select class="form-select" v-model="graphFilters.org">
               <option :value="-1">All</option>
-              <option v-for="org of orgs" :key="org._id" :value="org.name">{{ org.name }}</option>
+              <option v-for="org of orgs" :key="org._id" :value="org._id">{{ org.name }}</option>
             </select>
           </div>
-          <p v-if="filteredTransactions.length === 0" class="lead text-center">Log a transaction to enable data visualization.</p>
+          <p v-if="sortedTransactions.length === 0" class="lead text-center">Log a transaction to enable data visualization.</p>
           <Scatter v-else :data="scatterData" :options="financesBalanceVsTimeOptions" />
         </LuhCard>
 
         <LuhCard class="mt-4" title="Transactions by organization"
           text="See incoming/outgoing balance changes by organization.">
-          <p v-if="filteredTransactions.length === 0" class="lead text-center">Log a transaction to enable data visualization.</p>
-          <Bar v-else :data="barData" :options="financesByOrganizationOptions" />
+          <p v-if="sortedTransactions.length === 0" class="lead text-center">Log a transaction to enable data visualization.</p>
+          <Bar v-else :data="barData" :options="barOptions" />
         </LuhCard>
       </div>
     </div>

@@ -70,7 +70,7 @@ export const useFinancesByOrganizationData = (incoming: number[], outgoing: numb
   }],
 });
 
-export const financesByOrganizationOptions: any = {
+export const useFinancesByOrganizationOptions: any = (indexOrgNameMap: Record<number, string>) => ({
   plugins: {
     tooltip: {
       callbacks: {
@@ -81,7 +81,7 @@ export const financesByOrganizationOptions: any = {
           const yParsed = (context.parsed.y < 0 ? "-" : "") + "$" + Math.abs(context.parsed.y)
             .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-          return `${getOrgById(context.parsed.x)}: ${yParsed}`;
+          return `${indexOrgNameMap[context.parsed.x]}: ${yParsed}`;
         }
       }
     }
@@ -96,13 +96,13 @@ export const financesByOrganizationOptions: any = {
       }
     }
   }
-};
+});
 
 export const useInvestmentsPortfolioOverTimeData: any = (portfolioVsTime: TStockRange) => ({
   datasets: [{
     label: "Balance vs. time",
     data: portfolioVsTime,
     backgroundColor: "blue",
-    showLine: true,
+    // showLine: true,
   }],
 });
