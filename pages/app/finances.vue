@@ -98,7 +98,7 @@ watchEffect(() => {
   });
 
   // Populate organization histogram
-  for (let i = 0; i < getOrgsLength(); i += 1) {
+  for (let i = 0; i < orgs.value.length; i += 1) {
     incomingTransactionsByOrg.push(0);
     outgoingTransactionsByOrg.push(0);
   }
