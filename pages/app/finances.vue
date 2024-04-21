@@ -39,135 +39,40 @@ const scatterData = shallowRef({});
 const barData = shallowRef({});
 
 watchEffect(() => {
-  // Reset graphLists:
-  const graphLists = {
-    cumulativeSum: 0,
-    cumulativeTransactions: [] as Point[],
-    incomingTransactionsByOrg: [] as number[],
-    outgoingTransactionsByOrg: [] as number[]
-  };
+  let cumulativeSum = 0;
+  const cumulativeTransactions: Point[] = [];
+  const incomingTransactionsByOrg: number[] = [];
+  const outgoingTransactionsByOrg: number[] = [];
 
   // Populate balance vs. time graph:
   sortedTransactions.value.forEach(t => {
     if (t.orgId === graphFilters.org || graphFilters.org === -1) {
-      graphLists.cumulativeSum += t.amount;
-      graphLists.cumulativeTransactions.push({
+      cumulativeSum += t.amount;
+      cumulativeTransactions.push({
         x: Number(new Date(t.date)),
-        y: graphLists.cumulativeSum,
+        y: cumulativeSum,
       });
     }
   });
 
   // Populate organization histogram
   for (let i = 0; i < getOrgsLength(); i += 1) {
-    graphLists.incomingTransactionsByOrg.push(0);
-    graphLists.outgoingTransactionsByOrg.push(0);
+    incomingTransactionsByOrg.push(0);
+    outgoingTransactionsByOrg.push(0);
   }
 
   getTransactions().value.forEach(t => {
     if (t.amount > 0) {
-      graphLists.incomingTransactionsByOrg[t.orgId] += t.amount;
+      incomingTransactionsByOrg[t.orgId] += t.amount;
     } else {
-      graphLists.outgoingTransactionsByOrg[t.orgId] += t.amount;
+      outgoingTransactionsByOrg[t.orgId] += t.amount;
     }
   });
 
-  scatterData.value = {
-    datasets: [{
-      label: "Balance vs. time",
-      data: graphLists.cumulativeTransactions,
-      backgroundColor: "blue",
-      showLine: true,
-    }],
-  };
+  scatterData.value = useFinancesBalanceVsTimeData(cumulativeTransactions);
 
-  barData.value = {
-    labels: graphLists.incomingTransactionsByOrg.map((t, i) => (i)),
-    datasets: [{
-      label: "Incoming",
-      data: graphLists.incomingTransactionsByOrg,
-      backgroundColor: "green",
-    },
-    {
-      label: "Outgoing",
-      data: graphLists.outgoingTransactionsByOrg,
-      backgroundColor: "red",
-    }],
-  };
+  barData.value = useFinancesByOrganizationData(incomingTransactionsByOrg, outgoingTransactionsByOrg);
 });
-
-const scatterOptions = {
-  plugins: {
-    tooltip: {
-      callbacks: {
-        label(context: any) {
-          const fmt = (s: number) => (s % 1000).toLocaleString("en-US", { minimumIntegerDigits: 2 });
-
-          const d = new Date(context.parsed.x);
-          let month = d.getMonth();
-          month = month == 0 ? 12 : month;
-
-          const xParsed = `${fmt(month)}/${fmt(d.getDate())}/${fmt(d.getFullYear())}`;
-          const yParsed = (context.parsed.y < 0 ? "-" : "") + "$" + Math.abs(context.parsed.y)
-            .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-          return `${yParsed} on ${xParsed}`;
-        }
-      }
-    }
-  },
-  scales: {
-    // x: {
-    //   ticks: {
-    //     callback(value: number) {
-    //       const fmt = (s: number) => (s % 1000).toLocaleString("en-US", { minimumIntegerDigits: 2 });
-
-    //       const d = new Date(value);
-    //       let month = d.getMonth();
-    //       month = month == 0 ? 12 : month;
-
-    //       return `${fmt(month)}/${fmt(d.getDate())}/${fmt(d.getFullYear())}`;
-    //     }
-    //   }
-    // },
-    y: {
-      ticks: {
-        callback(value: number) {
-          return (value < 0 ? "-" : "") + "$" + Math.abs(value)
-            .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });;
-        }
-      }
-    }
-  }
-};
-
-const barOptions = {
-  plugins: {
-    tooltip: {
-      callbacks: {
-        title(context: any) {
-          return "";
-        },
-        label(context: any) {
-          const yParsed = (context.parsed.y < 0 ? "-" : "") + "$" + Math.abs(context.parsed.y)
-            .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-          return `${getOrgById(context.parsed.x)}: ${yParsed}`;
-        }
-      }
-    }
-  },
-  scales: {
-    y: {
-      ticks: {
-        callback(value: number) {
-          return (value < 0 ? "-" : "") + "$" + Math.abs(value)
-            .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });;
-        }
-      }
-    }
-  }
-};
 
 const addTransactionParams = reactive({
   orgId: -1,
@@ -177,7 +82,7 @@ const addTransactionParams = reactive({
 });
 
 function addTransaction() {
-  getTransactions().value.push({ ...addTransactionParams });
+  getTransactions().value.push({ _id: "45", company: "twizz", ...addTransactionParams });
 }
 
 const syncTransactions = reactive({
@@ -285,12 +190,12 @@ const syncTransactions = reactive({
               <option v-for="(org, i) of getOrgs()" :key="i" :value="i">{{ org }}</option>
             </select>
           </div>
-          <Scatter :data="scatterData" :options="scatterOptions" />
+          <Scatter :data="scatterData" :options="financesBalanceVsTimeOptions" />
         </LuhCard>
 
         <LuhCard class="mt-4" title="Transactions by organization"
           text="See incoming/outgoing balance changes by organization.">
-          <Bar :data="barData" :options="barOptions" />
+          <Bar :data="barData" :options="financesByOrganizationOptions" />
         </LuhCard>
       </div>
     </div>

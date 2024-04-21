@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const token = useToken();
 const isLoggedIn = computed(() => token.value !== null);
+const user = useUser();
 </script>
 
 <template>
@@ -8,7 +9,11 @@ const isLoggedIn = computed(() => token.value !== null);
     <div class="container-fluid">
       <NuxtLink class="navbar-brand" to="/">🐈 <b class="fw-max">FMS</b></NuxtLink>
 
-      <div class="ms-auto d-flex" v-if="isLoggedIn">
+      <div class="ms-auto d-flex align-items-center gap-2" v-if="isLoggedIn">
+        <span>
+          <b>{{ user?.name }}</b> @ {{ user?.company }}
+        </span>
+        <NuxtLink to="/auth/signup" class="btn btn-dark">Dashboard</NuxtLink>
         <button class="btn btn-danger">Logout</button>
       </div>
       <div class="ms-auto d-flex gap-2" v-else>
