@@ -38,7 +38,7 @@ const state = await useAsyncData<{
   transactions: ITransaction[];
   orgs: IOrg[];
 
-}>("transactions", async () => {
+}>("finances", async () => {
   return {
     transactions: await fetchTransactions(),
     orgs: await fetchOrgs(),
@@ -149,7 +149,7 @@ const syncTransactions = reactive({
     <div class="my-4 app-grid gap-4">
       <div>
         <LuhCard class="mb-4" title="Add a transaction" text="There are multiple ways to add transaction information to FMS.">
-          <p class="lead" v-if="orgs.length === 0">No organizations. <NuxtLink to="/app/admin">Add one!</NuxtLink></p>
+          <p class="lead text-center" v-if="orgs.length === 0">No organizations. <NuxtLink to="/app/admin">Add one!</NuxtLink></p>
           <template v-else>
             <details class="border px-3 py-2 rounded my-2">
               <summary>
@@ -220,7 +220,7 @@ const syncTransactions = reactive({
 
           <div style="max-height: 50vh; overflow-y: scroll;" class="pe-3">
             <TransactionCard v-for="(t, i) of filteredTransactions.toReversed()" :transaction="t" :key="i" />
-            <p v-if="filteredTransactions.length === 0" class="lead">No transactions yet; log one above.</p>
+            <p v-if="filteredTransactions.length === 0" class="lead text-center">No transactions yet; log one above.</p>
           </div>
         </LuhCard>
       </div>
@@ -234,23 +234,16 @@ const syncTransactions = reactive({
               <option v-for="org of orgs" :key="org._id" :value="org.name">{{ org.name }}</option>
             </select>
           </div>
-          <p v-if="filteredTransactions.length === 0" class="lead">Log a transaction to enable data visualization.</p>
+          <p v-if="filteredTransactions.length === 0" class="lead text-center">Log a transaction to enable data visualization.</p>
           <Scatter v-else :data="scatterData" :options="financesBalanceVsTimeOptions" />
         </LuhCard>
 
         <LuhCard class="mt-4" title="Transactions by organization"
           text="See incoming/outgoing balance changes by organization.">
-          <p v-if="filteredTransactions.length === 0" class="lead">Log a transaction to enable data visualization.</p>
+          <p v-if="filteredTransactions.length === 0" class="lead text-center">Log a transaction to enable data visualization.</p>
           <Bar v-else :data="barData" :options="financesByOrganizationOptions" />
         </LuhCard>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.app-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-</style>

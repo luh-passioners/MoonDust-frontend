@@ -34,10 +34,3 @@
     </div>
     </div>
 </template>
-
-<style scoped>
-.app-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-</style>

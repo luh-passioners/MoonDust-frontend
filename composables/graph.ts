@@ -97,3 +97,12 @@ export const financesByOrganizationOptions: any = {
     }
   }
 };
+
+export const useInvestmentsPortfolioOverTimeData: any = (portfolioVsTime: TStockRange) => ({
+  datasets: [{
+    label: "Balance vs. time",
+    data: portfolioVsTime,
+    backgroundColor: "blue",
+    showLine: true,
+  }],
+});

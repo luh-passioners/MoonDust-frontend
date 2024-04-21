@@ -21,3 +21,16 @@ declare interface IOrg {
   company: string;
   name: string;
 }
+
+declare interface IPosition {
+  _id: string;
+  ticker: string;
+  startDate: string;
+  initialPrice: number;
+  
+  active: boolean; // below props exist iff active = true
+  endDate?: string;
+  netChange?: number;
+}
+
+declare type TStockRange = ({ date: string, price: number })[];
