@@ -52,14 +52,14 @@ const orgs = computed(() => state.value?.orgs || []);
 
 const transactionFilters = reactive({
   type: "All",
-  org: "-1",
+  org: "all",
 });
 
 const sortedTransactions = computed(() => (state.value?.transactions || []).toSorted((a, b) => a.date.localeCompare(b.date)));
 
 const filteredTransactions = computed(() => sortedTransactions.value.filter(t => {
   // org filter fails
-  if (transactionFilters.org !== t.org_id && transactionFilters.org !== "-1") {
+  if (transactionFilters.org !== t.org_id && transactionFilters.org !== "all") {
     return false;
   }
 
@@ -77,7 +77,7 @@ const filteredTransactions = computed(() => sortedTransactions.value.filter(t =>
 }));
 
 const graphFilters = reactive({
-  org: "-1",
+  org: "all",
 });
 
 const getOrgById = (id: string) => {
@@ -100,7 +100,7 @@ watchEffect(() => {
   // Populate balance vs. time graph:
   sortedTransactions.value.forEach(t => {
     console.log(t.org_id, graphFilters.org);
-    if (t.org_id === graphFilters.org || graphFilters.org === "-1") {
+    if (t.org_id === graphFilters.org || graphFilters.org === "all") {
       cumulativeSum += t.amount;
       const x = Number(new Date(t.date));
       const dupe = cumulativeTransactions.length > 0 && 
@@ -115,6 +115,11 @@ watchEffect(() => {
         y: cumulativeSum,
       });
     }
+  });
+
+  orgs.value.forEach(o => {
+    incomingTransactionsByOrg[o._id] = 0;
+    outgoingTransactionsByOrg[o._id] = 0;
   });
 
   // Populate organization histogram
@@ -133,8 +138,6 @@ watchEffect(() => {
   const incomingOrgTransList: number[] = [];
   const outgoingOrgTransList: number[] = [];
 
-  console.log({ indexOrgNameMap, incomingOrgTransList, outgoingOrgTransList });
-
   let i = 0;
   for (let orgId of Object.keys(incomingTransactionsByOrg)) {
     indexOrgNameMap[i] = orgs.value.find(x => x._id === orgId)?.name || "N/A";
@@ -143,12 +146,14 @@ watchEffect(() => {
     i += 1;
   }
 
+  console.log({ incomingTransactionsByOrg, outgoingTransactionsByOrg, indexOrgNameMap, incomingOrgTransList, outgoingOrgTransList });
+
   barData.value = useFinancesByOrganizationData(incomingOrgTransList, outgoingOrgTransList);
   barOptions.value = useFinancesByOrganizationOptions(indexOrgNameMap);
 });
 
 const addTransactionParams = reactive({
-  org_id: -1,
+  org_id: "all",
   amount: 0,
   name: "",
   date: "",
@@ -242,7 +247,7 @@ const syncTransactions = reactive({
             <div>
               <small class="fw-bold">Organization</small>
               <select class="form-select" v-model="transactionFilters.org">
-                <option :value="-1" v-if="user?.type === 'full'">All</option>
+                <option value="all" v-if="user?.type === 'full'">All</option>
                 <option v-for="org of orgs" :key="org._id" :value="org._id">{{ org.name }}</option>
               </select>
             </div>
@@ -261,7 +266,7 @@ const syncTransactions = reactive({
           <div class="mb-4">
             <small class="fw-bold">Organization</small>
             <select class="form-select" v-model="graphFilters.org">
-              <option :value="-1">All</option>
+              <option value="all">All</option>
               <option v-for="org of orgs" :key="org._id" :value="org._id">{{ org.name }}</option>
             </select>
           </div>

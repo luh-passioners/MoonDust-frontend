@@ -94,6 +94,13 @@ export const useFinancesByOrganizationOptions: any = (indexOrgNameMap: Record<nu
             .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });;
         }
       }
+    },
+    x: {
+      ticks: {
+        callback(value: number) {
+          return indexOrgNameMap[value];
+        }
+      }
     }
   }
 });
