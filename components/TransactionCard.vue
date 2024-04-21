@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   transaction: ITransaction;
+  org: IOrg;
 }>();
 
 const isGain = computed(() => props.transaction.amount >= 0);
@@ -20,12 +21,7 @@ const isGain = computed(() => props.transaction.amount >= 0);
 
     <div class="data-row">
       <p>Organization</p>
-      <b>{{ getOrgById(props.transaction.orgId) }}</b>
-    </div>
-
-    <div class="data-row" v-if="typeof props.transaction.productId === 'number'">
-      <p>Product</p>
-      <b>{{ props.transaction.productId }}</b>
+      <b>{{ props.org.name }}</b>
     </div>
   </details>
 </template>

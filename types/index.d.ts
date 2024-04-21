@@ -25,6 +25,7 @@ declare interface IOrg {
 declare interface IPosition {
   _id: string;
   ticker: string;
+  shares: number;
   startDate: string;
   initialPrice: number;
   

@@ -8,24 +8,45 @@ definePageMeta({
 const state = useAsyncData<{
   positions: IPosition[];
   ranges: Record<string, TStockRange>;
+  names: Record<string, string>;
 }>("investments", async () => {
   const res = await api<{
     success: boolean;
     positions: IPosition[];
+    names: Record<string, string>;
     ranges: Record<string, TStockRange>;
   }>("GET")("/positions");
 
   if (res.success) {
-    return { positions: res.positions, ranges: res.ranges };
+    return { positions: res.positions, ranges: res.ranges, names: res.names };
   } else {
-    return { positions: [], ranges: {} };
+    return { positions: [], ranges: {}, names: {} };
   }
 });
 
 const positions = computed(() => state.data.value?.positions || []);
 const ranges = computed(() => state.data.value?.ranges || {});
 
-const scatterData = shallowRef<{}>();
+const addPositionParams = reactive({
+  startDate: "",
+  ticker: "",
+  shares: 0,
+  initialPrice: 0,
+});
+
+async function addPosition() {
+  const { success } = await api<{
+    success: boolean;
+  }>("POST")("/positions", addPositionParams);
+
+  if (success) {
+    state.refresh();
+  } else {
+    alert("Couldn't add that position, maybe retry?");
+  }
+}
+
+const scatterData = shallowRef<any>({});
 
 watchEffect(() => {
   const portfolioByDate: Record<number, number> = {};
@@ -55,20 +76,39 @@ watchEffect(() => {
     <div class="my-4 app-grid gap-4">
       <div>
         <LuhCard class="mb-4" title="Add a position" text="Add your stock positions to the investment manager.">
-          <form @submit.prevent>
+          <form @submit.prevent="addPosition">
             <div class="my-2">
-              <small class="fw-bold">Ticker/Symbol (eg. COF for Capital One)</small>
-              <input type="text" class="form-control" required>
+              <small class="fw-bold">Ticker/symbol (eg. COF for Capital One)</small>
+              <input type="text" class="form-control" v-model="addPositionParams.ticker" required>
             </div>
             
             <div class="my-2">
-              <small class="fw-bold"># Shares Purchased</small>
-              <input type="number" class="form-control" required>
+              <small class="fw-bold"># shares purchased</small>
+              <input type="number" class="form-control" v-model="addPositionParams.shares" required>
+            </div>
+
+            <div class="my-2">
+              <small class="fw-bold">Purchase price</small>
+              <input type="number" class="form-control" step="0.01" v-model="addPositionParams.initialPrice" required>
+            </div>
+
+            <div class="my-2">
+              <small class="fw-bold">Date of purchase</small>
+              <input type="date" class="form-control" required v-model="addPositionParams.startDate">
             </div>
             <button class="my-2 btn btn-success" type="submit">Add position</button>
           </form>
         </LuhCard>
-        <LuhCard class="mb-4" title="View portfolio" text="View your current positions."></LuhCard>
+        <LuhCard class="mb-4" title="View portfolio" text="View your current positions.">
+          <hr>
+          <PositionCard 
+            v-for="pos of positions" 
+            :key="pos._id"
+            :position="pos" 
+            :current="ranges[pos.ticker][ranges[pos.ticker].length - 1].price"
+            :name="state.data.value?.names[pos.ticker] || pos.ticker"   
+          />
+        </LuhCard>
       </div>
       <div>
         <LuhCard class="mb-4" title="Portfolio value vs. time" text="Visualize the change in your portfolio value over time.">

@@ -5,6 +5,10 @@
   font-family: "Inter", sans-serif !important;
 }
 
+html {
+  overflow-y: scroll;
+}
+
 .fw-max {
   font-weight: 900;
 }
