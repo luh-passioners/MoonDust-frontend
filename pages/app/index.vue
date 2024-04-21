@@ -31,7 +31,7 @@ definePageMeta({
       <div class="card bg-body-tertiary">
         <div class="card-body">
           <h5 class="card-title">Settings</h5>
-          <p class="card-text">Manage organizations and user access to FMS products.</p>
+          <p class="card-text">Manage organizations and user access to MoonDust products.</p>
           <div class="text-end">
             <NuxtLink class="btn btn-primary" to="/app/settings">Manage Settings →</NuxtLink>
           </div>

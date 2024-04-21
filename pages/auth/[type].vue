@@ -50,7 +50,7 @@ async function submit() {
 
 <template>
   <div class="container py-4" style="max-width: 768px;">
-    <h1 class="h1 fw-max text-center">{{ isSignup ? "Get your organization started!" : "Login to access FMS." }}</h1>
+    <h1 class="h1 fw-max text-center">{{ isSignup ? "Get your organization started!" : "Login to access MoonDust." }}</h1>
     <LuhCard class="my-4" :title="isSignup ? 'Sign up' : 'Login'" :text="isSignup ? 'Just fill out the fields below to get up and running!' : 'Enter your credentials below.'">
       <form @submit.prevent="submit">
         <div class="d-flex flex-column my-4" v-if="isSignup">

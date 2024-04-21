@@ -1,4 +1,4 @@
-# `fms-frontend` repo with Nuxt 3
+# `MoonDust-frontend` repo with Nuxt 3
 
 Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 

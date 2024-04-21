@@ -158,7 +158,7 @@ const syncTransactions = reactive({
 
     <div class="my-4 app-grid gap-4">
       <div>
-        <LuhCard class="mb-4" title="Add a transaction" text="There are multiple ways to add transaction information to FMS.">
+        <LuhCard class="mb-4" title="Add a transaction" text="There are multiple ways to add transaction information to MoonDust.">
           <p class="lead text-center" v-if="orgs.length === 0">No organizations. <NuxtLink to="/app/settings">Add one!</NuxtLink></p>
           <template v-else>
             <details class="border px-3 py-2 rounded my-2">
@@ -194,7 +194,7 @@ const syncTransactions = reactive({
 
             <details class="border px-3 py-2 rounded my-2">
                 <summary>
-                  <p class="card-text d-inline">Sync your account balance with FMS.</p>
+                  <p class="card-text d-inline">Sync your account balance with MoonDust.</p>
                 </summary>
 
                 <form @submit.prevent>
